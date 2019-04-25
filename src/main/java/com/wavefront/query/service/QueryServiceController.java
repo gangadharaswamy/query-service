@@ -1,8 +1,12 @@
 package com.wavefront.query.service;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.Instant;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,10 +22,13 @@ import com.wavefront.rest.models.QueryResult;
 import com.wavefront.rest.models.Timeseries;
 
 @RestController
-public class ApplicationHealthStatusController {
+public class QueryServiceController {
+	
+	Logger log = LoggerFactory.getLogger(QueryServiceController.class);
 	
 	@RequestMapping("/")
 	public String index() {
+		log.debug("Welcome page");
 		return "Greetings from wavefront health";
 	}
 
@@ -30,6 +37,7 @@ public class ApplicationHealthStatusController {
 			@RequestParam(name = "c", required = true) String clusterName,
 			@RequestParam(name = "q", required = true) String query) {
 		try {
+			log.debug("Query page");
 			ApiClient apiClient = new ApiClient();
 			apiClient.setBasePath("https://" + clusterName + ".wavefront.com");
 			apiClient.setApiKey(authHeader);
@@ -45,17 +53,23 @@ public class ApplicationHealthStatusController {
 				List<List<Float>> f = t.getData();
 				List<Float> l = f.get(f.size() - 1);
 				int lastValue = l.get(1).intValue();
+				log.debug("Query executed successfully " + query + " : " + lastValue);
 				if (lastValue == 1) {
 					return new ResponseEntity<String>(HttpStatus.OK.toString(), null, HttpStatus.OK);
 				} else if (lastValue == 0) {
 					return new ResponseEntity<String>(HttpStatus.NOT_FOUND.toString(), null, HttpStatus.NOT_FOUND);
 				} else {
+					log.warn("Warning: Not a boolean result query: " + query + " : " + HttpStatus.BAD_REQUEST);
 					return new ResponseEntity<String>(HttpStatus.BAD_REQUEST.toString() + " - Warning: Not a boolean result query: " + query, null, HttpStatus.BAD_REQUEST);
 				}
 			} else {
+				log.error("Error executing query " + query + " : " +  HttpStatus.INTERNAL_SERVER_ERROR);
 				return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR.toString(), null, HttpStatus.INTERNAL_SERVER_ERROR);
 			}
 		} catch (Exception ex) {
+			StringWriter sw = new StringWriter();
+			ex.printStackTrace(new PrintWriter(sw));
+			log.error(sw.toString());
 			return new ResponseEntity<String>("Error: While executing the query: " + query + " " + ex.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
