@@ -876,10 +876,10 @@ public class ApiClient {
       }
 
       @Override
-      public void onResponse(Response response) throws IOException {
+      public void onResponse(Response response) {
         T result;
         try {
-          result = (T) handleResponse(response, returnType);
+          result = handleResponse(response, returnType);
         } catch (ApiException e) {
           callback.onFailure(e, response.code(), response.headers().toMultimap());
           return;
@@ -971,7 +971,7 @@ public class ApiClient {
     final Request.Builder reqBuilder = new Request.Builder().url(url);
     processHeaderParams(headerParams, reqBuilder);
 
-    String contentType = (String) headerParams.get("Content-Type");
+    String contentType = headerParams.get("Content-Type");
     // ensuring a default content type
     if (contentType == null) {
       contentType = "application/json";
@@ -1152,11 +1152,11 @@ public class ApiClient {
       if (!verifyingSsl) {
         TrustManager trustAll = new X509TrustManager() {
           @Override
-          public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+          public void checkClientTrusted(X509Certificate[] chain, String authType) {
           }
 
           @Override
-          public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+          public void checkServerTrusted(X509Certificate[] chain, String authType) {
           }
 
           @Override

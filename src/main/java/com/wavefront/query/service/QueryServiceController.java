@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +31,8 @@ import com.wavefront.rest.models.Timeseries;
 public class QueryServiceController {
   private final Logger log = LoggerFactory.getLogger(
       QueryServiceController.class);
-
+  @Autowired
+  private Application metricSender;
   @RequestMapping("/")
   public String index() {
     return "Query Service is Running!!\n\n" +
@@ -72,14 +74,17 @@ public class QueryServiceController {
         int lastValue = l.get(1).intValue();
         log.debug("Query executed successfully " + query + " : " + lastValue);
         if (lastValue == 1) {
+          metricSender.sendMetrics("adm.queryservice.ok", 1);
           return new ResponseEntity<String>(HttpStatus.OK.toString(), null,
               HttpStatus.OK);
         } else if (lastValue == 0) {
+          metricSender.sendMetrics("adm.queryservice.not_found", 1);
           return new ResponseEntity<String>(HttpStatus.NOT_FOUND.toString(),
               null, HttpStatus.NOT_FOUND);
         } else {
           log.warn("Warning: Not a boolean result query: " + query +
               " : " + HttpStatus.BAD_REQUEST);
+          metricSender.sendMetrics("adm.queryservice.bad_request", 1);
           return new ResponseEntity<String>(HttpStatus.BAD_REQUEST.toString() +
               " - Warning: Not a boolean result query: " + query,
               null, HttpStatus.BAD_REQUEST);
@@ -87,6 +92,7 @@ public class QueryServiceController {
       } else {
         log.error("Error executing query " + query + " : " +
             HttpStatus.INTERNAL_SERVER_ERROR);
+        metricSender.sendMetrics("adm.queryservice.internal_server_error", 1);
         return new ResponseEntity<String>(
             HttpStatus.INTERNAL_SERVER_ERROR.toString(), null,
             HttpStatus.INTERNAL_SERVER_ERROR);
@@ -95,6 +101,7 @@ public class QueryServiceController {
       StringWriter sw = new StringWriter();
       ex.printStackTrace(new PrintWriter(sw));
       log.error(sw.toString());
+      metricSender.sendMetrics("adm.queryservice.internal_server_error", 1);
       return new ResponseEntity<String>("Error: While executing the query: " +
           query + " " + ex.getMessage(),
           null,
